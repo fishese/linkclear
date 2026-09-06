@@ -14,7 +14,7 @@ public final class LinkResolver {
         for (int hop = 0; hop < 5; hop++) {
             if (System.nanoTime() > deadline) throw new Exception();
             URI uri = LinkCleaner.validated(next);
-            if (uri.getHost().endsWith("instagram.com") != input.getHost().endsWith("instagram.com")) throw new Exception();
+            if (!LinkCleaner.sameProvider(uri, input)) throw new Exception();
             if (!"https".equalsIgnoreCase(uri.getScheme())) throw new Exception();
             try { return LinkCleaner.clean(next); } catch (IllegalArgumentException ignored) {}
             // Only known share tokens can be fetched. Never follow login or arbitrary paths.
@@ -52,7 +52,7 @@ public final class LinkResolver {
                         "og:url".equalsIgnoreCase(values.get("property")) ? values.get("content") : null;
                     if (candidate != null) {
                         candidate = uri.resolve(candidate.replace("&amp;", "&")).toString();
-                        if (LinkCleaner.validated(candidate).getHost().endsWith("instagram.com") != input.getHost().endsWith("instagram.com")) continue;
+                        if (!LinkCleaner.sameProvider(LinkCleaner.validated(candidate), input)) continue;
                         try { return LinkCleaner.clean(candidate); } catch (IllegalArgumentException ignored) {}
                     }
                 }
@@ -62,4 +62,3 @@ public final class LinkResolver {
         throw new Exception();
     }
 }
-

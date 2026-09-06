@@ -52,7 +52,27 @@ public class ShareFlowTest extends Instrumentation {
             check("https://www.instagram.com/reel/SYNTHETIC/".equals(shared.get()), "Preview share button must forward clean URL");
             shared.set(null);
             deliver(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,"https://threads.com/"));
-            check(shared.get() == null, "Homepage must never be forwarded");
+            check(shared.get() == null, "Unrecognized content must respect preview");
+            runOnMainSync(() -> findShare(activity.getWindow().getDecorView()).performClick());
+            check("https://threads.com/".equals(shared.get()), "Unrecognized homepage must pass through unchanged");
+            shared.set(null);
+            activity.getPreferences(0).edit().putBoolean("preview",false).commit();
+            String unknown = "Original caption\nhttps://example.org/post?keep=VALUE#fragment\n";
+            deliver(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,unknown));
+            check(unknown.equals(shared.get()), "Unknown link must preserve complete original content");
+            shared.set(null);
+            String multiple = "https://x.com/example/status/123?s=19 https://example.org/";
+            deliver(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,multiple));
+            check(multiple.equals(shared.get()), "Multiple URLs must pass through without partial cleaning");
+            shared.set(null);
+            Intent unknownClip = new Intent(Intent.ACTION_SEND).setType("text/plain");
+            unknownClip.setClipData(ClipData.newPlainText("Post",unknown));
+            deliver(unknownClip);
+            check(unknown.equals(shared.get()), "ClipData passthrough must not append whitespace");
+            shared.set(null);
+            deliver(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,"https://twitter.com/example/status/123456789?s=19&t=SYNTHETIC"));
+            check("https://x.com/example/status/123456789/".equals(shared.get()), "Twitter must clean and automatically forward");
+            shared.set(null);
             runOnMainSync(() -> ((MainActivity)activity).resolver = url -> "https://www.threads.com/@example/post/SYNTHETIC/");
             activity.getPreferences(0).edit().putBoolean("preview",false).commit();
             deliver(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,"https://threads.com/share/SYNTHETIC"));
@@ -81,9 +101,8 @@ public class ShareFlowTest extends Instrumentation {
     private void deliver(Intent intent) { runOnMainSync(() -> ((MainActivity)activity).onNewIntent(intent)); waitForIdleSync(); }
     private void check(boolean condition, String message) { if (!condition) throw new AssertionError(message); checks++; }
     private Button findShare(View view) {
-        if (view instanceof Button && "Share clean link".contentEquals(((Button)view).getText())) return (Button)view;
+        if (view instanceof Button && ("Share clean link".contentEquals(((Button)view).getText()) || "Share original content".contentEquals(((Button)view).getText()))) return (Button)view;
         if (view instanceof ViewGroup) for (int i=0;i<((ViewGroup)view).getChildCount();i++) { Button b=findShare(((ViewGroup)view).getChildAt(i)); if(b!=null)return b; }
         return null;
     }
 }
-

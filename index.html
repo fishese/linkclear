@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Clean Instagram, Threads and Twitter/X post links. Paste a link, remove its tracking parameters, then copy or share it.">
+  <meta name="theme-color" content="#176c52">
+  <meta name="referrer" content="no-referrer">
+  <title>LinkClear — clean a shared link</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/web.css">
+  <script src="/cleaner.js" defer></script>
+  <script src="/web.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><img src="/icon.svg" width="44" height="44" alt=""><h1>LinkClear</h1></header>
+    <p class="intro">Share the post. Leave the tracking behind.</p>
+    <form id="clean-form">
+      <label for="input">Paste a post link</label>
+      <textarea id="input" rows="4" placeholder="https://x.com/example/status/123456789?s=20" spellcheck="false" autocapitalize="off" autocomplete="off" required></textarea>
+      <div class="actions"><button type="submit">Clean link</button><button type="button" id="clear" class="secondary">Clear</button></div>
+    </form>
+    <section id="result" hidden aria-labelledby="result-title">
+      <h2 id="result-title">Your clean link</h2>
+      <p id="status" role="status" aria-live="polite"></p>
+      <label class="sr-only" for="output">Result</label>
+      <textarea id="output" rows="3" readonly spellcheck="false"></textarea>
+      <div class="actions"><button id="copy" type="button">Copy link</button><button id="share" type="button" class="secondary">Share link</button></div>
+    </section>
+    <p id="notice" role="status" aria-live="polite"></p>
+    <footer>
+      <p>Instagram · Threads · Twitter / X</p>
+      <p>Direct post links are cleaned in your browser. No sign-in or link history.</p>
+      <details><summary>Short links &amp; sharing from other apps</summary>
+        <p>Instagram and Threads short links need an online lookup. Use the Android app for these, or open the post yourself and paste its full address here. This page does not label unresolved links as clean.</p>
+        <p>Install this page from your browser menu to receive shared text on browsers that support web share targets. Availability depends on your browser and device. Pasting and copying works without installation.</p>
+        <p>Unknown links pass through unchanged, including any tracking data they contain.</p>
+      </details>
+      <p><a class="download" href="https://github.com/fishese/linkclear/releases/latest/download/LinkClear.apk">Download Android APK</a></p>
+      <a href="https://github.com/fishese/linkclear">View source on GitHub</a>
+    </footer>
+  </main>
+  <noscript>This cleaner needs JavaScript enabled. Your links are processed locally in the browser.</noscript>
+</body>
+</html>

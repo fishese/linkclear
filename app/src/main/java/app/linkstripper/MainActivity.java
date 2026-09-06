@@ -16,7 +16,7 @@ public final class MainActivity extends Activity {
     private LinearLayout editor;
     private Button share, copy, retry;
     private String cleaned, pending;
-    private boolean working, automatic, forwarded;
+    private boolean working, automatic, forwarded, passthrough;
     private int generation;
     interface Resolver { String resolve(String url) throws Exception; }
     Resolver resolver = LinkResolver::resolve;
@@ -41,12 +41,12 @@ public final class MainActivity extends Activity {
         share = button("Share clean link", content); share.setEnabled(false); share.setOnClickListener(v -> forward());
         result = label("", 16); result.setTextIsSelectable(true); result.setSaveEnabled(false); content.addView(result);
         copy = button("Copy clean link", content); copy.setVisibility(View.GONE); copy.setOnClickListener(v -> {
-            ((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Clean post link", cleaned));
-            status.setText("Clean link copied");
+            ((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText(passthrough ? "Original content" : "Clean post link", cleaned));
+            status.setText(passthrough ? "Original content copied" : "Clean link copied");
         });
         retry = button("Retry lookup", content); retry.setVisibility(View.GONE); retry.setOnClickListener(v -> resolvePending());
         editor = new LinearLayout(this); editor.setOrientation(LinearLayout.VERTICAL); content.addView(editor);
-        input = new EditText(this); input.setHint("Paste an Instagram or Threads post link"); input.setMinLines(2);
+        input = new EditText(this); input.setHint("Paste an Instagram, Threads or Twitter/X post link"); input.setMinLines(2);
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         input.setSaveEnabled(false); input.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO); editor.addView(input);
         Button clean = button("Clean and share", editor);
@@ -99,10 +99,10 @@ public final class MainActivity extends Activity {
             for (int i = 0; i < clip.getItemCount(); i++) {
                 ClipData.Item item = clip.getItemAt(i);
                 // Never dereference content URIs or read attachments.
-                if (item.getText() != null) parts.append(item.getText()).append('\n');
+                if (i > 0) parts.append('\n');
+                if (item.getText() != null) parts.append(item.getText());
                 else if (item.getUri() != null && ("https".equals(item.getUri().getScheme()) || "http".equals(item.getUri().getScheme())))
-                    parts.append(item.getUri()).append('\n');
-                if (parts.length() > 32768) break;
+                    parts.append(item.getUri());
             }
             if (parts.length() > 0) return parts.toString();
         }
@@ -112,7 +112,8 @@ public final class MainActivity extends Activity {
     }
 
     private void reset() {
-        generation++; cleaned = null; pending = null; working = false;
+        generation++; cleaned = null; pending = null; working = false; passthrough = false;
+        share.setText("Share clean link"); copy.setText("Copy clean link");
         share.setEnabled(false); copy.setVisibility(View.GONE); retry.setVisibility(View.GONE); result.setText("");
     }
     private void process(String text, boolean auto) {
@@ -123,11 +124,17 @@ public final class MainActivity extends Activity {
                 pending = url;
                 resolvePending();
             } else complete(LinkCleaner.clean(url));
-        } catch (IllegalArgumentException e) { status.setText(e.getMessage()); editor.setVisibility(View.VISIBLE); }
+        } catch (IllegalArgumentException e) {
+            passthrough = true;
+            Toast.makeText(this, "Unrecognized link — sharing original content unchanged", Toast.LENGTH_LONG).show();
+            complete(text);
+        }
     }
     private void complete(String url) {
         cleaned = url; pending = null; result.setText(url);
-        status.setText("Your clean post link is ready");
+        status.setText(passthrough ? "Unrecognized link • original content unchanged" : "Your clean post link is ready");
+        share.setText(passthrough ? "Share original content" : "Share clean link");
+        copy.setText(passthrough ? "Copy original content" : "Copy clean link");
         share.setEnabled(true); copy.setVisibility(View.VISIBLE); retry.setVisibility(View.GONE);
         if (automatic && !isFinishing()) forward();
     }
@@ -153,7 +160,7 @@ public final class MainActivity extends Activity {
     private void forward() {
         if (cleaned == null) return;
         Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, cleaned);
-        Intent chooser = Intent.createChooser(send, "Share clean post link");
+        Intent chooser = Intent.createChooser(send, passthrough ? "Share original content" : "Share clean post link");
         chooser.putExtra(Intent.EXTRA_EXCLUDE_COMPONENTS, new android.content.ComponentName[]{new android.content.ComponentName(this, MainActivity.class)});
         try { startActivity(chooser); forwarded = true; } catch (android.content.ActivityNotFoundException e) { status.setText("No sharing app is available. You can copy the clean link."); }
     }
@@ -163,5 +170,3 @@ public final class MainActivity extends Activity {
     private TextView label(String text, int size) { TextView v = new TextView(this); v.setText(text); v.setTextSize(size); v.setTextColor(Color.rgb(27,49,40)); v.setPadding(0,dp(8),0,dp(8)); return v; }
     private Button button(String text, LinearLayout parent) { Button b = new Button(this); b.setText(text); b.setAllCaps(false); parent.addView(b); return b; }
 }
-
-
