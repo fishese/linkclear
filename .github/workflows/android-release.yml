@@ -21,7 +21,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Install Android SDK components
-        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"'
       - name: Run synthetic parser checks
         shell: pwsh
         run: ./test-parser.ps1
