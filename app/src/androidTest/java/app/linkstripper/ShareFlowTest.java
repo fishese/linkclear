@@ -102,7 +102,7 @@ public class ShareFlowTest extends Instrumentation {
             activity=startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             runOnMainSync(()->{
                 ((android.content.ClipboardManager)activity.getSystemService(Activity.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Test","Synthetic paste"));
-                findButton(activity.getWindow().getDecorView(),"Paste").performClick();
+                findPaste(activity.getWindow().getDecorView()).performClick();
             });
             check(findInput(activity.getWindow().getDecorView()).getText().toString().equals("Synthetic paste"),"Paste button reads clipboard on tap");
             runOnMainSync(()->activity.finish());
@@ -129,6 +129,11 @@ public class ShareFlowTest extends Instrumentation {
             getTargetContext().getSharedPreferences("MainActivity",0).edit().putBoolean("preview",original).commit();
             removeMonitor(monitor);
         }
+    }
+    private View findPaste(View v) {
+        if("Paste".contentEquals(v.getContentDescription()==null?"":v.getContentDescription())) return v;
+        if(v instanceof ViewGroup) for(int i=0;i<((ViewGroup)v).getChildCount();i++) {View found=findPaste(((ViewGroup)v).getChildAt(i));if(found!=null)return found;}
+        return null;
     }
     private Button findButton(View v,String text) {
         if(v instanceof Button && text.contentEquals(((Button)v).getText())) return (Button)v;

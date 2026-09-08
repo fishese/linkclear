@@ -42,21 +42,16 @@ public class MainActivity extends Activity {
         content.addView(label("LinkClear", 30));
         content.addView(label("Share the post. Leave the tracking behind.", 16));
         status = label("Share a post to LinkClear, or paste a link below.", 16); content.addView(status);
-        // Keep the next action above the URL and editor, even with large system fonts.
-        share = button("Share clean link", content); share.setEnabled(false); share.setOnClickListener(v -> forward());
-        result = label("", 16); result.setTextIsSelectable(true); result.setSaveEnabled(false); content.addView(result);
-        copy = button("Copy clean link", content); copy.setVisibility(View.GONE); copy.setOnClickListener(v -> {
-            ((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText(passthrough ? "Original content" : "Clean post link", cleaned));
-            status.setText(passthrough ? "Original content copied" : "Clean link copied");
-        });
-        retry = button("Retry lookup", content); retry.setVisibility(View.GONE); retry.setOnClickListener(v -> resolvePending());
-        browserFallback = button("Open in login browser", content); browserFallback.setVisibility(View.GONE);
-        browserFallback.setOnClickListener(v -> { if(pending!=null) startActivityForResult(new Intent(this,BrowserActivity.class).putExtra("url",pending),102); });
         editor = new LinearLayout(this); editor.setOrientation(LinearLayout.VERTICAL); content.addView(editor);
+        LinearLayout inputRow = new LinearLayout(this); inputRow.setGravity(android.view.Gravity.CENTER_VERTICAL); editor.addView(inputRow);
         input = new EditText(this); input.setHint("Paste a link to clean"); input.setMinLines(2);
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        input.setSaveEnabled(false); input.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO); editor.addView(input);
-        Button paste = button("Paste", editor);
+        input.setSaveEnabled(false); input.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO); inputRow.addView(input,new LinearLayout.LayoutParams(0,LinearLayout.LayoutParams.WRAP_CONTENT,1));
+        ImageButton paste = new ImageButton(this);
+        paste.setImageResource(R.drawable.ic_paste); paste.setContentDescription("Paste"); paste.setTooltipText("Paste");
+        paste.setBackgroundResource(android.R.drawable.list_selector_background);
+        paste.setPadding(dp(12),dp(12),dp(12),dp(12));
+        inputRow.addView(paste,new LinearLayout.LayoutParams(dp(48),dp(48)));
         paste.setOnClickListener(v -> {
             ClipboardManager clipboard=(ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
             ClipData clip=clipboard.getPrimaryClip();
@@ -69,6 +64,15 @@ public class MainActivity extends Activity {
             ((android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(input.getWindowToken(), 0);
             process(input.getText().toString(), !getSharedPreferences("MainActivity",0).getBoolean("preview", false));
         });
+        share = button("Share clean link", content); share.setEnabled(false); share.setOnClickListener(v -> forward());
+        result = label("", 16); result.setTextIsSelectable(true); result.setSaveEnabled(false); content.addView(result);
+        copy = button("Copy clean link", content); copy.setVisibility(View.GONE); copy.setOnClickListener(v -> {
+            ((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText(passthrough ? "Original content" : "Clean post link", cleaned));
+            status.setText(passthrough ? "Original content copied" : "Clean link copied");
+        });
+        retry = button("Retry lookup", content); retry.setVisibility(View.GONE); retry.setOnClickListener(v -> resolvePending());
+        browserFallback = button("Open in login browser", content); browserFallback.setVisibility(View.GONE);
+        browserFallback.setOnClickListener(v -> { if(pending!=null) startActivityForResult(new Intent(this,BrowserActivity.class).putExtra("url",pending),102); });
         Switch preview = new Switch(this); preview.setText("Preview before opening share sheet");
         preview.setChecked(getSharedPreferences("MainActivity",0).getBoolean("preview", false));
         preview.setPadding(0,dp(16),0,dp(16)); content.addView(preview);
