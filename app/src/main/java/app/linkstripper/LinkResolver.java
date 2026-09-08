@@ -7,7 +7,33 @@ import javax.net.ssl.HttpsURLConnection;
 
 /** Anonymous, bounded lookup; no cookies, login, WebView, or URL logging. */
 public final class LinkResolver {
+    static String googleDestination(String destination) throws Exception {
+        URI uri=SiteRule.url(destination);
+        // Google may wrap its external destination in a standard /url redirect.
+        if(("www.google.com".equals(uri.getHost()) || "google.com".equals(uri.getHost())) && "/url".equals(uri.getPath()) && uri.getRawQuery()!=null) {
+            for(String pair:uri.getRawQuery().split("&")) {
+                String[] parts=pair.split("=",2);
+                if(parts.length==2 && (parts[0].equals("url") || parts[0].equals("q"))) {
+                    destination=java.net.URLDecoder.decode(parts[1],StandardCharsets.UTF_8.name());
+                    uri=SiteRule.url(destination); break;
+                }
+            }
+        }
+        String host=uri.getHost();
+        if(host.equals("share.google") || host.equals("search.app") || host.equals("google.com") || host.endsWith(".google.com"))
+            throw new Exception("Google did not provide an external destination. Try the browser.");
+        try {return LinkCleaner.clean(destination);} catch(IllegalArgumentException ignored) {return destination;}
+    }
     public static String resolve(String original) throws Exception {
+        if(LinkCleaner.googleShare(original)) {
+            URI source=URI.create(original);
+            // Fetch only Google's shortener. The external destination is returned, never fetched.
+            UrlInspector.Result result=UrlInspector.inspect("https://"+source.getHost()+source.getRawPath(), java.util.Set.of("share.google","search.app","www.google.com","google.com"),
+                uri -> LinkCleaner.googleShare(uri.toString()) ||
+                    ((uri.getHost().equals("www.google.com") || uri.getHost().equals("google.com")) && uri.getPath().equals("/share.google") && uri.getRawQuery()!=null));
+            if(result.needsHost()==null) throw new Exception("Google did not provide a destination.");
+            return googleDestination(result.url());
+        }
         URI input = LinkCleaner.validated(original);
         String next = "https://" + input.getHost() + input.getRawPath();
         long deadline = System.nanoTime() + 25_000_000_000L;

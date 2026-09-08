@@ -88,15 +88,57 @@ public class ShareFlowTest extends Instrumentation {
                 runOnMainSync(() -> ready.set(findShare(activity.getWindow().getDecorView()).isEnabled())); Thread.sleep(20);
             }
             check(ready.get() && shared.get() == null, "Short-link preview must expose Share without opening chooser");
+            activity.getPreferences(0).edit().putBoolean("preview",false).commit();
+            shared.set(null);
+            deliver(new Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT,"Heading\n(https://instagram.com/p/SYNTHETIC?igsh=REMOVE).\nSource: Example  "));
+            check("Heading\n(https://www.instagram.com/p/SYNTHETIC/).\nSource: Example  ".equals(shared.get()),"Captions and punctuation must survive cleaning");
+            shared.set(null);
+            runOnMainSync(()->((MainActivity)activity).resolver=url->"https://example.org/article?id=123");
+            deliver(new Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT,"Heading\nhttps://share.google/SYNTHETIC\nSource: Example"));
+            until=System.currentTimeMillis()+3000;
+            while(shared.get()==null && System.currentTimeMillis()<until) {Thread.sleep(20);waitForIdleSync();}
+            check("Heading\nhttps://example.org/article?id=123\nSource: Example".equals(shared.get()),"Google lookup preserves surrounding text and destination query");
+            runOnMainSync(()->activity.finish());
+            activity=startActivitySync(new Intent(getTargetContext(),MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            runOnMainSync(()->{
+                ((android.content.ClipboardManager)activity.getSystemService(Activity.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Test","Synthetic paste"));
+                findButton(activity.getWindow().getDecorView(),"Paste").performClick();
+            });
+            check(findInput(activity.getWindow().getDecorView()).getText().toString().equals("Synthetic paste"),"Paste button reads clipboard on tap");
+            runOnMainSync(()->activity.finish());
+            // An absent setting must forward with no attached app editor.
+            getTargetContext().getSharedPreferences("MainActivity",0).edit().remove("preview").commit();
+            activity=startActivitySync(new Intent(getTargetContext(),ShareActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            check(findShare(activity.getWindow().getDecorView())==null,"Default share entry must not attach editor");
+            shared.set(null);
+            deliver(new Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT,"https://x.com/example/status/123?s=20"));
+            check("https://x.com/example/status/123/".equals(shared.get()) && activity.isFinishing(),"Default relay must forward and finish");
+            getTargetContext().getSharedPreferences("MainActivity",0).edit().putBoolean("preview",true).commit();
+            activity=startActivitySync(new Intent(getTargetContext(),ShareActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            shared.set(null);
+            deliver(new Intent(Intent.ACTION_SEND).putExtra(Intent.EXTRA_TEXT,"https://x.com/example/status/123?s=19"));
+            check(shared.get()==null && findShare(activity.getWindow().getDecorView())!=null,"Relay preview must show editor and wait");
+            runOnMainSync(()->findShare(activity.getWindow().getDecorView()).performClick());
+            check(activity.isFinishing(),"Preview relay must close after forwarding");
             output.putString("stream", "\n" + checks + " share-flow checks passed. No recipient app opened.\n");
             finish(Activity.RESULT_OK, output);
         } catch (Throwable error) {
-            output.putString("stream", "\nShare-flow regression failed after " + checks + " checks: " + error.getClass().getSimpleName() + "\n");
+            output.putString("stream", "\nShare-flow regression failed after " + checks + " checks: " + error.getClass().getSimpleName() + ": " + error.getMessage() + "\n");
             finish(Activity.RESULT_CANCELED, output);
         } finally {
             getTargetContext().getSharedPreferences("MainActivity",0).edit().putBoolean("preview",original).commit();
             removeMonitor(monitor);
         }
+    }
+    private Button findButton(View v,String text) {
+        if(v instanceof Button && text.contentEquals(((Button)v).getText())) return (Button)v;
+        if(v instanceof ViewGroup) for(int i=0;i<((ViewGroup)v).getChildCount();i++) {Button b=findButton(((ViewGroup)v).getChildAt(i),text);if(b!=null)return b;}
+        return null;
+    }
+    private android.widget.EditText findInput(View v) {
+        if(v instanceof android.widget.EditText) return (android.widget.EditText)v;
+        if(v instanceof ViewGroup) for(int i=0;i<((ViewGroup)v).getChildCount();i++) {android.widget.EditText e=findInput(((ViewGroup)v).getChildAt(i));if(e!=null)return e;}
+        return null;
     }
     private void deliver(Intent intent) { runOnMainSync(() -> ((MainActivity)activity).onNewIntent(intent)); waitForIdleSync(); }
     private void check(boolean condition, String message) { if (!condition) throw new AssertionError(message); checks++; }

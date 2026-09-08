@@ -25,7 +25,7 @@ jobs:
       - name: Run synthetic parser checks
         shell: pwsh
         run: ./test-parser.ps1
-      - name: Run web cleaner checks
+      - name: Check retired web share target
         run: node test-web.cjs
       - name: Build and sign release
         env:

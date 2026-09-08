@@ -4,9 +4,12 @@ package app.linkstripper;
 public class ResolverProbe {
     public static void main(String[] args) {
         try {
-            String input = new java.io.BufferedReader(new java.io.InputStreamReader(System.in)).readLine();
+            var reader = new java.io.BufferedReader(new java.io.InputStreamReader(System.in));
+            String input = reader.readLine();
+            String expected = reader.readLine();
             String result = LinkResolver.resolve(input);
-            System.out.println("Resolved to recognized post; query=" + (java.net.URI.create(result).getQuery() != null));
+            if(expected!=null && !expected.equals(result)) throw new Exception();
+            System.out.println("Resolved successfully" + (expected==null ? "" : "; exact destination verified") + "; query=" + (java.net.URI.create(result).getQuery()!=null));
         } catch (Exception ignored) { System.out.println("Resolution failed safely (no URL logged)."); System.exit(1); }
     }
 }

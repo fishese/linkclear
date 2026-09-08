@@ -26,6 +26,19 @@ public final class LinkCleaner {
         if (m.find()) throw new IllegalArgumentException("Multiple links found. Share one post link at a time.");
         return url;
     }
+    public static String replaceUrl(String text, String original, String replacement) {
+        int start=text.indexOf(original);
+        if(start<0) return text;
+        return text.substring(0,start)+replacement+text.substring(start+original.length());
+    }
+    public static boolean googleShare(String url) {
+        try {
+            URI u=URI.create(url);
+            return ("https".equalsIgnoreCase(u.getScheme()) || "http".equalsIgnoreCase(u.getScheme())) &&
+                ("share.google".equalsIgnoreCase(u.getHost()) || "search.app".equalsIgnoreCase(u.getHost())) &&
+                u.getUserInfo()==null && u.getPort()==-1 && u.getRawPath().matches("/[A-Za-z0-9_-]+/?");
+        } catch(Exception e) { return false; }
+    }
     public static URI validated(String url) {
         try {
             URI u = URI.create(url);
@@ -49,6 +62,7 @@ public final class LinkCleaner {
         throw new IllegalArgumentException("This is not a recognized post URL.");
     }
     public static boolean needsResolution(String url) {
+        if(googleShare(url)) return true;
         URI u = validated(url);
         String host = u.getHost().toLowerCase(Locale.ROOT);
         if (host.endsWith("instagram.com")) return u.getRawPath().matches("/share/(?:p|reel|r)/[A-Za-z0-9_-]+/?");

@@ -9,12 +9,16 @@ import javax.net.ssl.HttpsURLConnection;
 public final class UrlInspector {
     public record Result(String url, List<String> steps, String needsHost) {}
     public static Result inspect(String input, Set<String> allowed) throws Exception {
+        return inspect(input,allowed,uri->true);
+    }
+    static Result inspect(String input,Set<String> allowed,java.util.function.Predicate<URI> permittedPath) throws Exception {
         String next=input; List<String> steps=new ArrayList<>(); Set<String> seen=new HashSet<>();
         long deadline=System.nanoTime()+25_000_000_000L;
         for(int hop=0;hop<6;hop++) {
             URI uri=SiteRule.url(next);
             if(!"https".equalsIgnoreCase(uri.getScheme())) throw new Exception("Use HTTPS for online lookup.");
             if(!allowed.contains(uri.getHost().toLowerCase(Locale.ROOT))) return new Result(next,steps,uri.getHost());
+            if(!permittedPath.test(uri)) throw new Exception("Unsupported lookup path. Try the browser.");
             if(!seen.add(next)) throw new Exception("Redirect loop detected.");
             if(System.nanoTime()>deadline || Thread.currentThread().isInterrupted()) throw new Exception("Lookup timed out.");
             for(InetAddress address:InetAddress.getAllByName(uri.getHost())) {
