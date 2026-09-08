@@ -14,7 +14,8 @@ public final class MainActivity extends Activity {
     private TextView status, result;
     private EditText input;
     private LinearLayout editor;
-    private Button share, copy, retry;
+    private Button share, copy, retry, browserFallback;
+    private SiteRule pendingRule;
     private String cleaned, pending;
     private boolean working, automatic, forwarded, passthrough;
     private int generation;
@@ -45,6 +46,8 @@ public final class MainActivity extends Activity {
             status.setText(passthrough ? "Original content copied" : "Clean link copied");
         });
         retry = button("Retry lookup", content); retry.setVisibility(View.GONE); retry.setOnClickListener(v -> resolvePending());
+        browserFallback = button("Open in login browser", content); browserFallback.setVisibility(View.GONE);
+        browserFallback.setOnClickListener(v -> { if(pending!=null) startActivityForResult(new Intent(this,BrowserActivity.class).putExtra("url",pending),102); });
         editor = new LinearLayout(this); editor.setOrientation(LinearLayout.VERTICAL); content.addView(editor);
         input = new EditText(this); input.setHint("Paste an Instagram, Threads or Twitter/X post link"); input.setMinLines(2);
         input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
@@ -62,6 +65,7 @@ public final class MainActivity extends Activity {
             automatic = !checked;
         });
         content.addView(label("Short links are looked up automatically on the original site without signing in. That site receives the link token and your IP address. No link history or analytics is stored.", 14));
+        Button rules=button("Site rules & browser",content);rules.setOnClickListener(v->startActivity(new Intent(this,RulesActivity.class)));
         input.addTextChangedListener(new android.text.TextWatcher() {
             public void beforeTextChanged(CharSequence s,int start,int count,int after) {}
             public void onTextChanged(CharSequence s,int start,int before,int count) { reset(); }
@@ -112,7 +116,8 @@ public final class MainActivity extends Activity {
     }
 
     private void reset() {
-        generation++; cleaned = null; pending = null; working = false; passthrough = false;
+        generation++; cleaned = null; pending = null; pendingRule=null; working = false; passthrough = false;
+        browserFallback.setVisibility(View.GONE);
         share.setText("Share clean link"); copy.setText("Copy clean link");
         share.setEnabled(false); copy.setVisibility(View.GONE); retry.setVisibility(View.GONE); result.setText("");
     }
@@ -120,6 +125,13 @@ public final class MainActivity extends Activity {
         reset(); automatic = auto; forwarded = false;
         try {
             String url = LinkCleaner.extract(text);
+            SiteRule custom;
+            try { custom=RuleStore.find(this,url); } catch(IllegalStateException e) {status.setText(e.getMessage());return;}
+            if(custom!=null) {
+                if(custom.resolveFirst()) {pending=url;pendingRule=custom;resolvePending();}
+                else complete(custom.apply(url));
+                return;
+            }
             if (LinkCleaner.needsResolution(url)) {
                 pending = url;
                 resolvePending();
@@ -136,15 +148,16 @@ public final class MainActivity extends Activity {
         share.setText(passthrough ? "Share original content" : "Share clean link");
         copy.setText(passthrough ? "Copy original content" : "Copy clean link");
         share.setEnabled(true); copy.setVisibility(View.VISIBLE); retry.setVisibility(View.GONE);
+        browserFallback.setVisibility(View.GONE);
         if (automatic && !isFinishing()) forward();
     }
     private void resolvePending() {
         if (working || pending == null) return;
         working = true; retry.setVisibility(View.GONE); status.setText("Finding the original post…");
-        String source = pending; int request = generation;
+        String source = pending; SiteRule rule=pendingRule; int request = generation;
         worker.execute(() -> {
             String answer = null;
-            try { answer = resolver.resolve(source); } catch (Exception ignored) {}
+            try { answer = rule==null?resolver.resolve(source):UrlInspector.apply(rule,source); } catch (Exception ignored) {}
             String finalAnswer = answer;
             runOnUiThread(() -> {
                 if (isDestroyed() || request != generation) return;
@@ -152,10 +165,19 @@ public final class MainActivity extends Activity {
                 if (finalAnswer != null) complete(finalAnswer);
                 else {
                     retry.setVisibility(View.VISIBLE); editor.setVisibility(View.VISIBLE);
+                    browserFallback.setVisibility(View.VISIBLE);
                     status.setText("Could not resolve this link. Retry, or paste the full post address from your browser. Nothing was forwarded.");
                 }
             });
         });
+    }
+    @Override protected void onActivityResult(int request,int code,Intent data) {
+        super.onActivityResult(request,code,data);
+        if(request==102 && code==RESULT_OK && data!=null) {
+            String finalUrl=data.getStringExtra("url");
+            try {if(pendingRule!=null)complete(pendingRule.apply(finalUrl));else process(finalUrl,automatic);}
+            catch(Exception e){status.setText("The selected browser URL does not match the saved rule. Edit it in Site rules.");}
+        }
     }
     private void forward() {
         if (cleaned == null) return;
