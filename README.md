@@ -83,7 +83,7 @@ The browser uses Android's installed WebView engine; no browser engine or extra 
 
 Login cookies stay in the optional browser and can persist between visits. They are never exported to the anonymous resolver. Navigate to the post and tap **Use this URL**. **External** opens your usual browser if a site refuses embedded login; copy its final address back manually. Some providers block WebView login, so support is site-dependent. Browser data can be cleared from its own screen. Local file access, mixed HTTP content and JavaScript-to-native bridges are disabled; JavaScript and site storage are enabled for login.
 
-**Check for updates** contacts GitHub only when tapped, compares the latest published release with the installed version, and offers the permanent download link when a newer build exists. There is no background update check.
+The home screen separates link cleaning, site rules and updates into labeled sections. The update section stays at the bottom, and its status appears directly below **Check for updates**. The check contacts GitHub only when tapped, compares the latest published release with the installed version, and offers the permanent download link when a newer build exists. There is no background update check.
 
 On-device regression commands after installing the debug and Android test APKs:
 

@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.TextView;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** Device regression checks. Only synthetic URLs; chooser intercepted, no recipient apps opened. */
@@ -113,6 +114,10 @@ public class ShareFlowTest extends Instrumentation {
                 findPaste(activity.getWindow().getDecorView()).performClick();
             });
             check(findInput(activity.getWindow().getDecorView()).getText().toString().equals("Synthetic paste"),"Paste button reads clipboard on tap");
+            Button rulesButton=findButton(activity.getWindow().getDecorView(),"Site rules & browser");
+            Button updateButton=findButton(activity.getWindow().getDecorView(),"Check for updates");
+            TextView updateLine=findText(activity.getWindow().getDecorView(),"Installed version v");
+            check(rulesButton!=null && updateButton!=null && updateLine!=null && rulesButton.getTop()<updateButton.getTop() && updateLine.getTop()>=updateButton.getBottom(),"Site and update sections must be ordered with update status under its button");
             runOnMainSync(()->activity.finish());
             // An absent setting must forward with no attached app editor.
             getTargetContext().getSharedPreferences("MainActivity",0).edit().remove("preview").commit();
@@ -151,6 +156,11 @@ public class ShareFlowTest extends Instrumentation {
     private android.widget.EditText findInput(View v) {
         if(v instanceof android.widget.EditText) return (android.widget.EditText)v;
         if(v instanceof ViewGroup) for(int i=0;i<((ViewGroup)v).getChildCount();i++) {android.widget.EditText e=findInput(((ViewGroup)v).getChildAt(i));if(e!=null)return e;}
+        return null;
+    }
+    private TextView findText(View v,String prefix) {
+        if(v instanceof TextView && ((TextView)v).getText().toString().startsWith(prefix)) return (TextView)v;
+        if(v instanceof ViewGroup) for(int i=0;i<((ViewGroup)v).getChildCount();i++) {TextView text=findText(((ViewGroup)v).getChildAt(i),prefix);if(text!=null)return text;}
         return null;
     }
     private void deliver(Intent intent) { runOnMainSync(() -> ((MainActivity)activity).onNewIntent(intent)); waitForIdleSync(); }

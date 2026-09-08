@@ -11,7 +11,7 @@ import android.view.WindowManager;
 import android.widget.*;
 
 public class MainActivity extends Activity {
-    private TextView status, result;
+    private TextView status, result, updateStatus;
     private EditText input;
     private LinearLayout editor;
     private Button share, copy, retry, browserFallback;
@@ -41,6 +41,8 @@ public class MainActivity extends Activity {
         });
         content.addView(label("LinkClear", 30));
         content.addView(label("Share the post. Leave the tracking behind.", 16));
+        divider(content);
+        content.addView(sectionTitle("Clean a link"));
         status = label("Share a post to LinkClear, or paste a link below.", 16); content.addView(status);
         editor = new LinearLayout(this); editor.setOrientation(LinearLayout.VERTICAL); content.addView(editor);
         LinearLayout inputRow = new LinearLayout(this); inputRow.setGravity(android.view.Gravity.CENTER_VERTICAL); editor.addView(inputRow);
@@ -81,9 +83,15 @@ public class MainActivity extends Activity {
             automatic = !checked;
         });
         content.addView(label("Short links are looked up automatically on the original site without signing in. That site receives the link token and your IP address. No link history or analytics is stored.", 14));
-        Button updates=button("Check for updates",content);
-        updates.setOnClickListener(v->checkForUpdates(updates));
+        divider(content);
+        content.addView(sectionTitle("Site rules"));
+        content.addView(label("Add support for another site or adjust how an existing link is cleaned.",14));
         Button rules=button("Site rules & browser",content);rules.setOnClickListener(v->startActivity(new Intent(this,RulesActivity.class)));
+        divider(content);
+        content.addView(sectionTitle("Updates"));
+        Button updates=button("Check for updates",content);
+        updateStatus=label("Installed version v"+installedVersion()+" · Checks only when tapped.",14); content.addView(updateStatus);
+        updates.setOnClickListener(v->checkForUpdates(updates));
         input.addTextChangedListener(new android.text.TextWatcher() {
             public void beforeTextChanged(CharSequence s,int start,int count,int after) {}
             public void onTextChanged(CharSequence s,int start,int before,int count) { reset(); }
@@ -209,7 +217,7 @@ public class MainActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle state) { state.putBoolean("forwarded",forwarded); super.onSaveInstanceState(state); }
     @Override protected void onDestroy() { generation++; worker.shutdownNow(); super.onDestroy(); }
     private void checkForUpdates(Button button) {
-        button.setEnabled(false); status.setText("Checking for updates…");
+        button.setEnabled(false); updateStatus.setText("Checking for updates…");
         String installed=installedVersion();
         worker.execute(() -> {
             String available=null;
@@ -218,12 +226,12 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 if(isDestroyed()) return;
                 button.setEnabled(true);
-                if(latest==null) { status.setText("Could not check for updates. Try again later."); return; }
+                if(latest==null) { updateStatus.setText("Could not check for updates. Try again later."); return; }
                 if(!UpdateChecker.isNewer(latest,installed)) {
-                    status.setText("LinkClear is up to date (v"+installed+").");
+                    updateStatus.setText("LinkClear is up to date (v"+installed+").");
                     return;
                 }
-                status.setText("LinkClear v"+latest+" is available.");
+                updateStatus.setText("LinkClear v"+latest+" is available.");
                 new android.app.AlertDialog.Builder(this)
                     .setTitle("Update available")
                     .setMessage("LinkClear v"+latest+" is available. Open the permanent download link?")
@@ -240,9 +248,15 @@ public class MainActivity extends Activity {
     }
     private void openDownload() {
         try { startActivity(new Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://linkclear.fishese.cc/download/"))); }
-        catch(android.content.ActivityNotFoundException e) { status.setText("No browser is available to download the update."); }
+        catch(android.content.ActivityNotFoundException e) { updateStatus.setText("No browser is available to download the update."); }
     }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
+    private void divider(LinearLayout parent) {
+        View line=new View(this); line.setBackgroundColor(Color.rgb(210,220,213));
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,dp(1));
+        params.setMargins(0,dp(20),0,dp(10)); parent.addView(line,params);
+    }
+    private TextView sectionTitle(String text) { TextView v=label(text,20); v.setTypeface(null,android.graphics.Typeface.BOLD); return v; }
     private TextView label(String text, int size) { TextView v = new TextView(this); v.setText(text); v.setTextSize(size); v.setTextColor(Color.rgb(27,49,40)); v.setPadding(0,dp(8),0,dp(8)); return v; }
     private Button button(String text, LinearLayout parent) { Button b = new Button(this); b.setText(text); b.setAllCaps(false); parent.addView(b); return b; }
 }
