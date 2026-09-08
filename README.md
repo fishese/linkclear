@@ -9,7 +9,7 @@ The [download page](https://linkclear.fishese.cc/) links through the permanent a
 1. Install the APK in `app/build/outputs/apk/debug/app-debug.apk`.
 2. In Instagram, Threads or Twitter/X, choose Share → More → LinkClear.
 3. Recognized direct post links open the Android share sheet with the cleaned text. Enable **Preview before opening share sheet** in LinkClear to review first.
-4. Short links are resolved automatically, without an extra Clean or Resolve tap. This contacts the original site with the path token, without cookies or login. With preview off, success opens the share sheet immediately. With preview on, the Share button appears near the top of the screen. Failed lookups never forward the original token or a homepage.
+4. Short links are resolved automatically, without an extra Clean or Resolve tap. This contacts the original site with the path token, without cookies or login. With preview off, success opens the share sheet immediately. With preview on, the Share button appears near the top of the screen. If lookup fails, LinkClear forwards the original shared content unchanged and shows a toast; preview mode pauses with a **Share original content** button.
 
 You can also paste a link into the launcher screen and tap **Clean and share**. Incoming shares skip the paste editor. Recognized single post URLs are cleaned while surrounding text, punctuation and line breaks are preserved. Unrecognized input (including multiple URLs) passes the original text through unchanged with a toast; preview mode shows a Share original content button. No messages are sent automatically: choose the destination in Android's share sheet.
 
@@ -33,7 +33,7 @@ All examples below are synthetic.
 | `twitter.com/example/status/123456789?s=20` | Normalize to `x.com`, remove query parameters and fragment |
 | `x.com/example/status/123456789?s=19&t=REMOVED` | Direct post; mobile/www hosts, `/i/web/status/`, `/i/status/` and photo/video suffixes supported |
 
-Unknown domains, unknown paths, profiles, stories, multiple URLs, userinfo, explicit ports and malformed addresses pass through unchanged with a toast. They are never labeled as cleaned. For recognized posts, all query parameters are removed, including optional carousel or presentation selections. Known short links whose network lookup fails still show Retry rather than automatically forwarding an unresolved token. The post author's handle remains when it is part of the canonical address; this tool does not anonymize the post's author or the content itself.
+Unknown domains, unknown paths, profiles, stories, multiple URLs, userinfo, explicit ports and malformed addresses pass through unchanged with a toast. They are never labeled as cleaned. For recognized posts, all query parameters are removed, including optional carousel or presentation selections. Known short links whose network lookup fails pass through unchanged and are clearly labeled as unresolved. The post author's handle remains when it is part of the canonical address; this tool does not anonymize the post's author or the content itself.
 
 Google share lookup contacts only `share.google`, `search.app` and Google’s `/share.google` redirect endpoint, with at most six hops. External destinations are validated and returned without fetching them. Login or JavaScript-only landing pages may require the browser fallback.
 

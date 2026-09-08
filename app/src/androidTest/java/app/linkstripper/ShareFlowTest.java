@@ -80,6 +80,14 @@ public class ShareFlowTest extends Instrumentation {
             while (shared.get() == null && System.currentTimeMillis() < until) { Thread.sleep(20); waitForIdleSync(); }
             check("https://www.threads.com/@example/post/SYNTHETIC/".equals(shared.get()), "Short link must resolve and auto-forward without taps");
             shared.set(null);
+            runOnMainSync(() -> ((MainActivity)activity).resolver = url -> { throw new Exception(); });
+            String unresolved="Heading\nhttps://threads.com/share/UNRESOLVED\nSource: Example";
+            deliver(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,unresolved));
+            until = System.currentTimeMillis() + 3000;
+            while (shared.get() == null && System.currentTimeMillis() < until) { Thread.sleep(20); waitForIdleSync(); }
+            check(unresolved.equals(shared.get()), "Failed lookup must forward complete original content unchanged");
+            shared.set(null);
+            runOnMainSync(() -> ((MainActivity)activity).resolver = url -> "https://www.threads.com/@example/post/SYNTHETIC/");
             activity.getPreferences(0).edit().putBoolean("preview",true).commit();
             deliver(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,"https://threads.com/share/SYNTHETIC"));
             java.util.concurrent.atomic.AtomicBoolean ready = new java.util.concurrent.atomic.AtomicBoolean();

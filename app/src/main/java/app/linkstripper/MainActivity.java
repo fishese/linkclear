@@ -182,9 +182,9 @@ public class MainActivity extends Activity {
                 working = false;
                 if (finalAnswer != null) complete(finalAnswer);
                 else {
-                    showScreen(); retry.setVisibility(View.VISIBLE); editor.setVisibility(View.VISIBLE);
-                    browserFallback.setVisibility(View.VISIBLE);
-                    status.setText("Could not resolve this link. Retry, or paste the full post address from your browser. Nothing was forwarded.");
+                    passthrough=true;
+                    Toast.makeText(this,"Could not resolve link — sharing original content unchanged",Toast.LENGTH_LONG).show();
+                    complete(originalText);
                 }
             });
         });
