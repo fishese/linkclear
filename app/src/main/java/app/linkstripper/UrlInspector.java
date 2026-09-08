@@ -12,7 +12,7 @@ public final class UrlInspector {
         return inspect(input,allowed,uri->true);
     }
     static Result inspect(String input,Set<String> allowed,java.util.function.Predicate<URI> permittedPath) throws Exception {
-        String next=input; List<String> steps=new ArrayList<>(); Set<String> seen=new HashSet<>();
+        String next=input; List<String> steps=new ArrayList<>(); Set<String> seen=new HashSet<>(); boolean redirected=false;
         long deadline=System.nanoTime()+25_000_000_000L;
         for(int hop=0;hop<6;hop++) {
             URI uri=SiteRule.url(next);
@@ -29,13 +29,14 @@ public final class UrlInspector {
             steps.add(next);
             HttpsURLConnection c=(HttpsURLConnection)uri.toURL().openConnection();
             c.setInstanceFollowRedirects(false); c.setConnectTimeout(6000); c.setReadTimeout(6000);
-            c.setRequestProperty("User-Agent","Mozilla/5.0 (compatible; LinkClear/0.2)");
+            LinkResolver.browserHeaders(c);
             try {
                 int code=c.getResponseCode();
                 if(code>=300 && code<400) {
                     String location=c.getHeaderField("Location"); if(location==null) throw new Exception("Redirect has no destination.");
-                    next=uri.resolve(location).toString(); continue;
+                    next=uri.resolve(location).toString(); redirected=true; continue;
                 }
+                if(code==429 && redirected) return new Result(next,steps,null);
                 if(code!=200) throw new Exception("Site returned HTTP "+code+". Try the browser if login is required.");
                 String type=c.getContentType();
                 if(type!=null && type.toLowerCase(Locale.ROOT).contains("text/html")) {

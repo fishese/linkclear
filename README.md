@@ -2,7 +2,7 @@
 
 Small native Android share target for Instagram, Threads, Twitter/X and Google share links, with editable custom site rules. Android 8+; no LinkClear account, analytics, share-link history, or backend.
 
-The [download page](https://linkclear.fishese.cc/) links to the [latest signed Android APK](https://github.com/fishese/linkclear/releases/latest/download/LinkClear.apk). Cleaning and resolution run in the Android app; there is no web resolver or backend.
+The [download page](https://linkclear.fishese.cc/) links through the permanent address [`https://linkclear.fishese.cc/download/`](https://linkclear.fishese.cc/download/). Share that address for the latest signed Android APK; it stays the same across releases. Cleaning and resolution run in the Android app; there is no web resolver or backend.
 
 ## Use
 
@@ -35,9 +35,11 @@ All examples below are synthetic.
 
 Unknown domains, unknown paths, profiles, stories, multiple URLs, userinfo, explicit ports and malformed addresses pass through unchanged with a toast. They are never labeled as cleaned. For recognized posts, all query parameters are removed, including optional carousel or presentation selections. Known short links whose network lookup fails still show Retry rather than automatically forwarding an unresolved token. The post author's handle remains when it is part of the canonical address; this tool does not anonymize the post's author or the content itself.
 
-Google share lookup contacts only `share.google`, `search.app` and Google’s `/share.google` redirect endpoint, with at most six hops. External destinations are validated and returned without fetching them. Login or JavaScript-only landing pages may require the browser fallback.
+Google share lookup contacts only `share.google`, `search.app` and Googleâ€™s `/share.google` redirect endpoint, with at most six hops. External destinations are validated and returned without fetching them. Login or JavaScript-only landing pages may require the browser fallback.
 
 Social short-link lookup follows at most five hops on an exact host allowlist within the original provider. It accepts recognized direct-post redirects or canonical/og:url HTML metadata. It does not execute JavaScript or sign in. Login walls, JavaScript-only redirects, rate limits and changed formats can prevent resolution. Real-world support must be verified against current links; synthetic parser tests do not prove a post exists.
+
+Threads short links use a lightweight `HEAD` request because its browser response is a large JavaScript landing page without a canonical address. Other online lookups use a clearly identified LinkClear agent with ordinary HTML request headers. LinkClear does not send a fabricated Referer header. If a rule lookup follows a valid redirect and the destination then returns HTTP 429, the editor keeps the redirect destination for review instead of discarding it. A site may still rate-limit the device or IP address independently.
 
 ## Build and verify
 
@@ -53,6 +55,8 @@ The app uses Android platform widgets and no runtime third-party libraries. The 
 ### Signed APK via GitHub Actions
 
 Run **Build signed Android APK** manually from the repository's Actions tab. The workflow runs parser checks, release lint, builds the APK, verifies its signature and uploads a `LinkClear-signed-N` artifact containing `LinkClear.apk` and its SHA-256 checksum. It does not publish a GitHub Release or deploy the website.
+
+Publish the artifact as a normal, non-draft GitHub Release, mark it as the latest release, and keep the asset filename exactly `LinkClear.apk`. GitHub will then update `https://github.com/fishese/linkclear/releases/latest/download/LinkClear.apk` automatically. The permanent public link `https://linkclear.fishese.cc/download/` redirects there, so neither the website nor shared download links need changing for each version. Do not share the long `release-assets.githubusercontent.com` address shown after downloading; it is a temporary signed redirect.
 
 Repository secrets required: `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. The keystore is decoded only into the runner's temporary directory, removed after the build, and never uploaded. Signing secrets are passed through environment variables, not command-line arguments. For local release signing, set `ANDROID_KEYSTORE_PATH` and the three password/alias variables; otherwise a local release build is unsigned.
 
@@ -78,6 +82,8 @@ Only saved rule fields and one undo copy persist, not the sample or test URLs. R
 The browser uses Android's installed WebView engine; no browser engine or extra runtime library is bundled. It is created only when explicitly opened in the builder or after a failed lookup. Normal shares never initialize WebView or its cookie manager. Saved rule definitions are cached; direct rules run locally, and only resolution rules make network requests.
 
 Login cookies stay in the optional browser and can persist between visits. They are never exported to the anonymous resolver. Navigate to the post and tap **Use this URL**. **External** opens your usual browser if a site refuses embedded login; copy its final address back manually. Some providers block WebView login, so support is site-dependent. Browser data can be cleared from its own screen. Local file access, mixed HTTP content and JavaScript-to-native bridges are disabled; JavaScript and site storage are enabled for login.
+
+**Check for updates** contacts GitHub only when tapped, compares the latest published release with the installed version, and offers the permanent download link when a newer build exists. There is no background update check.
 
 On-device regression commands after installing the debug and Android test APKs:
 

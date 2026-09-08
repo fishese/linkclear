@@ -42,6 +42,10 @@ public class ParserTest {
             checks++; boolean rejected=false; try {LinkResolver.googleDestination(invalid);} catch(Exception e){rejected=true;}
             if(!rejected) throw new AssertionError("Invalid Google destination accepted");
         }
+        eq("true", Boolean.toString(UpdateChecker.isNewer("0.2.3", "0.2.2")));
+        eq("false", Boolean.toString(UpdateChecker.isNewer("0.2.3", "0.2.3")));
+        eq("false", Boolean.toString(UpdateChecker.isNewer("0.2.2", "0.2.3")));
+        eq("true", Boolean.toString(UpdateChecker.isNewer("1.0.0", "0.9.9")));
         System.out.println(checks + " parser checks passed (synthetic fixtures).");
     }
 }

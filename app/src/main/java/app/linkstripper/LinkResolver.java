@@ -48,7 +48,9 @@ public final class LinkResolver {
             HttpsURLConnection c = (HttpsURLConnection) uri.toURL().openConnection();
             c.setInstanceFollowRedirects(false);
             c.setConnectTimeout(7000); c.setReadTimeout(7000);
-            c.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; LinkClear/0.1)");
+            browserHeaders(c);
+            boolean threadsHead = (uri.getHost().endsWith("threads.com") || uri.getHost().endsWith("threads.net")) && LinkCleaner.needsResolution(next);
+            if (threadsHead) c.setRequestMethod("HEAD");
             try {
                 int status = c.getResponseCode();
                 if (status >= 300 && status < 400) {
@@ -86,5 +88,11 @@ public final class LinkResolver {
             } finally { c.disconnect(); }
         }
         throw new Exception();
+    }
+
+    static void browserHeaders(HttpsURLConnection connection) {
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; LinkClear/0.3; +https://linkclear.fishese.cc/)");
+        connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+        connection.setRequestProperty("Accept-Language", "en-US,en;q=0.9");
     }
 }

@@ -81,6 +81,8 @@ public class MainActivity extends Activity {
             automatic = !checked;
         });
         content.addView(label("Short links are looked up automatically on the original site without signing in. That site receives the link token and your IP address. No link history or analytics is stored.", 14));
+        Button updates=button("Check for updates",content);
+        updates.setOnClickListener(v->checkForUpdates(updates));
         Button rules=button("Site rules & browser",content);rules.setOnClickListener(v->startActivity(new Intent(this,RulesActivity.class)));
         input.addTextChangedListener(new android.text.TextWatcher() {
             public void beforeTextChanged(CharSequence s,int start,int count,int after) {}
@@ -206,6 +208,40 @@ public class MainActivity extends Activity {
     }
     @Override protected void onSaveInstanceState(Bundle state) { state.putBoolean("forwarded",forwarded); super.onSaveInstanceState(state); }
     @Override protected void onDestroy() { generation++; worker.shutdownNow(); super.onDestroy(); }
+    private void checkForUpdates(Button button) {
+        button.setEnabled(false); status.setText("Checking for updates…");
+        String installed=installedVersion();
+        worker.execute(() -> {
+            String available=null;
+            try { available=UpdateChecker.latestVersion(); } catch(Exception ignored) {}
+            String latest=available;
+            runOnUiThread(() -> {
+                if(isDestroyed()) return;
+                button.setEnabled(true);
+                if(latest==null) { status.setText("Could not check for updates. Try again later."); return; }
+                if(!UpdateChecker.isNewer(latest,installed)) {
+                    status.setText("LinkClear is up to date (v"+installed+").");
+                    return;
+                }
+                status.setText("LinkClear v"+latest+" is available.");
+                new android.app.AlertDialog.Builder(this)
+                    .setTitle("Update available")
+                    .setMessage("LinkClear v"+latest+" is available. Open the permanent download link?")
+                    .setNegativeButton("Not now",null)
+                    .setPositiveButton("Download",(dialog,which)->openDownload())
+                    .show();
+            });
+        });
+    }
+    @SuppressWarnings("deprecation")
+    private String installedVersion() {
+        try { return getPackageManager().getPackageInfo(getPackageName(),0).versionName; }
+        catch(android.content.pm.PackageManager.NameNotFoundException impossible) { return "0.0.0"; }
+    }
+    private void openDownload() {
+        try { startActivity(new Intent(Intent.ACTION_VIEW,android.net.Uri.parse("https://linkclear.fishese.cc/download/"))); }
+        catch(android.content.ActivityNotFoundException e) { status.setText("No browser is available to download the update."); }
+    }
     private int dp(int value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private TextView label(String text, int size) { TextView v = new TextView(this); v.setText(text); v.setTextSize(size); v.setTextColor(Color.rgb(27,49,40)); v.setPadding(0,dp(8),0,dp(8)); return v; }
     private Button button(String text, LinearLayout parent) { Button b = new Button(this); b.setText(text); b.setAllCaps(false); parent.addView(b); return b; }

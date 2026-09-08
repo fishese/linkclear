@@ -1,6 +1,12 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const homepage = fs.readFileSync('index.html', 'utf8');
+const downloadPage = fs.readFileSync('download/index.html', 'utf8');
+assert.match(homepage, /href="\/download\/"/);
+assert.match(downloadPage, /releases\/latest\/download\/LinkClear\.apk/);
+assert.doesNotMatch(homepage, /release-assets\.githubusercontent\.com/);
+console.log('Permanent APK download route is configured.');
 async function checkShareTarget() {
-  const fs = require('node:fs');
   const vm = require('node:vm');
   const events = {};
   vm.runInNewContext(fs.readFileSync('sw.js', 'utf8'), {

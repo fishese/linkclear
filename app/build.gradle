@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 android {
     namespace 'app.linkstripper'
     compileSdk 36
-    defaultConfig { applicationId 'app.linkstripper'; minSdk 26; targetSdk 36; versionCode 7; versionName '0.2.2' }
+    defaultConfig { applicationId 'app.linkstripper'; minSdk 26; targetSdk 36; versionCode 8; versionName '0.2.3' }
     signingConfigs {
         release {
             def keystorePath = System.getenv('ANDROID_KEYSTORE_PATH')
